@@ -13,7 +13,6 @@ rng = np.random.RandomState(0)
 
 from tti_explorer.strategies import TTIFlowModel
 
-
 # parameters
 n_cases = 10000
 name = 'S4_test_based_TTI'
@@ -23,7 +22,7 @@ contacts_config = config.get_contacts_config("delve")
 policy_config = config.get_strategy_configs("delve", name)[name]
 
 
-configs = [case_config, contacts_config, policy_config]
+configs = {"case_config": case_config, "contacts_config": contacts_config, "policy_config": policy_config}
 
 
 def simulation(theta, config_details):
@@ -34,12 +33,12 @@ def simulation(theta, config_details):
     """
     
     for i, val in enumerate(theta):
-        index = config_details[i]["index"]
+        config_type = config_details[i]["config"]
         config_name = config_details[i]["name"]
-        configs[index][config_name] = val
+        configs[config_type][config_name] = val
     
-    factor_config = utils.get_sub_dictionary(configs[2], config.DELVE_CASE_FACTOR_KEYS)
-    strategy_config = utils.get_sub_dictionary(configs[2], config.DELVE_STRATEGY_FACTOR_KEYS)
+    factor_config = utils.get_sub_dictionary(configs["policy_config"], config.DELVE_CASE_FACTOR_KEYS)
+    strategy_config = utils.get_sub_dictionary(configs["policy_config"], config.DELVE_STRATEGY_FACTOR_KEYS)
     
     rng = np.random.RandomState(42)
     simulate_contacts = EmpiricalContactsSimulator(over18, under18, rng)
@@ -48,18 +47,21 @@ def simulation(theta, config_details):
     outputs = list()
 
     for _ in trange(n_cases):
-        case = simulate_case(rng, **configs[0])
+        case = simulate_case(rng, **configs["case_config"])
         case_factors = CaseFactors.simulate_from(rng, case, **factor_config)
-        contacts = simulate_contacts(case, **configs[1])
+        contacts = simulate_contacts(case, **configs["contacts_config"])
         res = tti_model(case, contacts, case_factors)
         outputs.append(res)
 
     effective_R = pd.DataFrame(outputs).mean(0).loc[RETURN_KEYS.reduced_r]
-    return effective_R
-   
+    return effective_R   
    
 if __name__ == "main":
-	# example with theta only having one value
-	theta = [0]
-	config_details = {0 : {"name": "p_under18", "index": 0}}
+	# example with theta having two values to optimize for
+	# example with theta having two values to optimize for
+	theta = [0, 1]
+
+	config_details = {0 : {"name": "p_under18", "config": "case_config"}, 
+                 1 : {"name": "compliance", "config": "policy_config"}}
+
 	simulation(theta, config_details)
