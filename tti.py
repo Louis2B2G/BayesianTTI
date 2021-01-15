@@ -72,6 +72,9 @@ def simulation(theta, config_details):
     for i, val in enumerate(theta):
         config_type = config_details[i]["config"]
         config_name = config_details[i]["name"]
+        # Make sure actual integers has type int, for example val for "testing_delay"
+        if val % 1 == 0:
+            val = int(val)
         configs[config_type][config_name] = val
     
     factor_config = utils.get_sub_dictionary(configs["policy_config"], config.DELVE_CASE_FACTOR_KEYS)
@@ -95,13 +98,14 @@ def simulation(theta, config_details):
         RETURN_KEYS.reduced_r,
         RETURN_KEYS.man_trace,
         RETURN_KEYS.app_trace,
-        RETURN_KEYS.tests
+        RETURN_KEYS.tests,
+        RETURN_KEYS.quarantine
     ]
 
     # scale factor to turn simulation numbers into UK population numbers
     nppl = case_config['infection_proportions']['nppl']
-    scales = [1, 1, nppl, nppl, nppl]
+    scales = [1, 1, nppl, nppl, nppl, 1]
 
-    # The keys of the dict are {'Base R', 'Effective R', '# Manual Traces', '# App Traces', '# Tests Needed'}
+    # The keys of the dict are {'Base R', 'Effective R', '# Manual Traces', '# App Traces', '# Tests Needed', # PersonDays Quarantined }
     output_dict = dict(pd.DataFrame(outputs).mean(0).loc[to_show].mul(scales))
     return output_dict   
